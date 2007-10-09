@@ -6,6 +6,7 @@
 static void
 notify (const char *title, const char *artist)
 {
+  GError *error = NULL;
   NotifyNotification *notify;
   char *message;
 
@@ -23,8 +24,11 @@ notify (const char *title, const char *artist)
   
   notify_notification_set_urgency (notify, NOTIFY_URGENCY_LOW);
   
-  notify_notification_show (notify, NULL);
-
+  if (!notify_notification_show (notify, &error)) {
+    g_warning ("Cannot show notification: %s", error->message);
+    g_error_free (error);
+  }
+  
   g_object_unref (notify);
   
   g_free (message);
