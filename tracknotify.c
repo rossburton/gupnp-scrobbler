@@ -4,24 +4,20 @@
 #include <string.h>
 
 static void
-subscription_lost_cb (GUPnPServiceProxy *proxy,
-                      const GError      *reason,
-                      gpointer           user_data)
-{
-        g_print ("Lost subscription: %s\n", reason->message);
-}
-
-static void
-notify (const char *title)
+notify (const char *title, const char *artist)
 {
   NotifyNotification *notify;
   char *message;
 
-  if (title == NULL)
+  if (title && artist)
+    message = g_strdup_printf ("Playing %s by %s", title, artist);
+  else if (title && !artist)
+    message = g_strdup_printf ("Playing %s", title);
+  else if (!title && artist)
+    message = g_strdup_printf ("Playing %s", artist);
+  else
     return;
-
-  message = g_strdup_printf ("Playing %s", title);
-
+  
   notify = notify_notification_new (message, NULL,
                                     "audio-volume-high", NULL);
   
@@ -39,18 +35,32 @@ parse_meta (const xmlChar *xml)
 {
   xmlTextReader *reader;
   int res;
-  
+  char *title = NULL, *artist = NULL;
+
   reader = xmlReaderForDoc (xml, NULL, NULL, 0);
   
   while ((res = xmlTextReaderRead (reader)) == 1) {
     if (xmlTextReaderNodeType (reader) == XML_READER_TYPE_ELEMENT &&
         xmlStrcmp (xmlTextReaderConstName (reader), (xmlChar*)"dc:title") == 0) {
       xmlTextReaderRead (reader);
-      notify ((char*)xmlTextReaderConstValue (reader));
-      break;
+      title = (char*)xmlTextReaderValue (reader);
+      continue;
+    }
+
+    if (xmlTextReaderNodeType (reader) == XML_READER_TYPE_ELEMENT &&
+        xmlStrcmp (xmlTextReaderConstName (reader), (xmlChar*)"upnp:artist") == 0) {
+      xmlTextReaderRead (reader);
+      artist = (char*)xmlTextReaderValue (reader);
+      continue;
     }
   }
+
+  if (title || artist)
+    notify (title, artist);
+
   xmlFreeTextReader (reader);
+  g_free (title);
+  g_free (artist);
 }
 
 static void
@@ -84,38 +94,13 @@ static void
 service_proxy_available_cb (GUPnPControlPoint *cp,
                             GUPnPServiceProxy *proxy)
 {
-        const char *location;
-
-        location = gupnp_service_info_get_location (GUPNP_SERVICE_INFO (proxy));
-
-        g_print ("AVTransport available:\n");
-        g_print ("\tlocation: %s\n", location);
-
         gupnp_service_proxy_add_notify (proxy,
                                         "LastChange",
                                         G_TYPE_STRING,
                                         notify_cb,
                                         NULL);
 
-        /* Subscribe */
-        g_signal_connect (proxy,
-                          "subscription-lost",
-                          G_CALLBACK (subscription_lost_cb),
-                          NULL);
-
         gupnp_service_proxy_set_subscribed (proxy, TRUE);
-}
-
-static void
-service_proxy_unavailable_cb (GUPnPControlPoint *cp,
-                              GUPnPServiceProxy *proxy)
-{
-        const char *location;
-
-        location = gupnp_service_info_get_location (GUPNP_SERVICE_INFO (proxy));
-
-        g_print ("AVTransport unavailable:\n");
-        g_print ("\tlocation: %s\n", location);
 }
 
 int
@@ -146,11 +131,7 @@ main (int argc, char **argv)
                           "service-proxy-available",
                           G_CALLBACK (service_proxy_available_cb),
                           NULL);
-        g_signal_connect (cp,
-                          "service-proxy-unavailable",
-                          G_CALLBACK (service_proxy_unavailable_cb),
-                          NULL);
-
+        
         gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
         main_loop = g_main_loop_new (NULL, FALSE);
