@@ -19,6 +19,8 @@ notify (const char *title, const char *artist)
   else
     return;
   
+  /* TODO: if the notify is already on screen, change it */
+  
   notify = notify_notification_new (message, NULL,
                                     "audio-volume-high", NULL);
   
