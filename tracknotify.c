@@ -11,11 +11,11 @@ notify (const char *title, const char *artist)
   char *message;
 
   if (title && artist)
-    message = g_strdup_printf ("Playing %s by %s", title, artist);
+    message = g_markup_printf_escaped ("Playing %s by %s", title, artist);
   else if (title && !artist)
-    message = g_strdup_printf ("Playing %s", title);
+    message = g_markup_printf_escaped ("Playing %s", title);
   else if (!title && artist)
-    message = g_strdup_printf ("Playing %s", artist);
+    message = g_markup_printf_escaped ("Playing %s", artist);
   else
     return;
   
