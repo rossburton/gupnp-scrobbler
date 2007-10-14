@@ -2,20 +2,49 @@
 #include <libgupnp/gupnp-control-point.h>
 #include <libnotify/notify.h>
 #include <string.h>
+#include <time.h>
+
+typedef struct {
+  char *class;
+  char *title;
+  char *artist;
+} DIDL;
 
 static void
-notify (const char *title, const char *artist)
+scrob (DIDL *didl)
+{
+  char *command;
+  int res;
+  
+  command = g_strdup_printf ("dbus-send --print-reply --dest=com.burtonini.Scrobbler "
+                             "/com/burtonini/Scrobbler "
+                             "com.burtonini.Scrobbler.Submit "
+                             "uint32:%ld " /* timestamp */
+                             "string:\"%s\" " /* artist */
+                             "string:\"%s\" " /* title */
+                             "uint32:0 " /* track number */
+                             "uint32:0 " /* length */
+                             "string: " /* album */
+                             "string: " /* musicbrainz ID */
+                             "string:P", /* type */
+                             time (NULL), didl->artist, didl->title);
+  res = system (command);
+  g_free (command);
+}
+
+static void
+notify (DIDL *didl)
 {
   GError *error = NULL;
   NotifyNotification *notify;
   char *message;
 
-  if (title && artist)
-    message = g_markup_printf_escaped ("Playing %s by %s", title, artist);
-  else if (title && !artist)
-    message = g_markup_printf_escaped ("Playing %s", title);
-  else if (!title && artist)
-    message = g_markup_printf_escaped ("Playing %s", artist);
+  if (didl->title && didl->artist)
+    message = g_markup_printf_escaped ("Playing %s by %s", didl->title, didl->artist);
+  else if (didl->title && !didl->artist)
+    message = g_markup_printf_escaped ("Playing %s", didl->title);
+  else if (!didl->title && didl->artist)
+    message = g_markup_printf_escaped ("Playing %s", didl->artist);
   else
     return;
   
@@ -36,37 +65,51 @@ notify (const char *title, const char *artist)
   g_free (message);
 }
 
+static const struct {
+  const char *node;
+  int offset;
+} map[] = {
+  { "upnp:class", G_STRUCT_OFFSET (DIDL, class) },
+  { "dc:title", G_STRUCT_OFFSET (DIDL, title) },
+  { "upnp:artist", G_STRUCT_OFFSET (DIDL, artist) },
+};
+
 static void
 parse_meta (const xmlChar *xml)
 {
+  DIDL didl = { NULL, NULL, NULL };
   xmlTextReader *reader;
-  int res;
-  char *title = NULL, *artist = NULL;
+  int i, res;
 
   reader = xmlReaderForDoc (xml, NULL, NULL, 0);
   
   while ((res = xmlTextReaderRead (reader)) == 1) {
-    if (xmlTextReaderNodeType (reader) == XML_READER_TYPE_ELEMENT &&
-        xmlStrcmp (xmlTextReaderConstName (reader), (xmlChar*)"dc:title") == 0) {
-      xmlTextReaderRead (reader);
-      title = (char*)xmlTextReaderValue (reader);
-      continue;
-    }
+    const xmlChar *tagname;
 
-    if (xmlTextReaderNodeType (reader) == XML_READER_TYPE_ELEMENT &&
-        xmlStrcmp (xmlTextReaderConstName (reader), (xmlChar*)"upnp:artist") == 0) {
-      xmlTextReaderRead (reader);
-      artist = (char*)xmlTextReaderValue (reader);
+    if (xmlTextReaderNodeType (reader) != XML_READER_TYPE_ELEMENT)
       continue;
+
+    tagname = xmlTextReaderConstName (reader);
+    
+    for (i = 0; i < G_N_ELEMENTS (map); i++) {
+      if (xmlStrcmp (tagname, (xmlChar*)map[i].node) != 0)
+        continue;
+
+      xmlTextReaderRead (reader);
+
+      G_STRUCT_MEMBER (xmlChar*, &didl, map[i].offset) = xmlTextReaderValue (reader);
     }
   }
-
-  if (title || artist)
-    notify (title, artist);
-
   xmlFreeTextReader (reader);
-  g_free (title);
-  g_free (artist);
+
+  if (didl.title || didl.artist) {
+    notify (&didl);
+    scrob (&didl);
+  }
+
+  g_free (didl.class);
+  g_free (didl.title);
+  g_free (didl.artist);
 }
 
 static void
