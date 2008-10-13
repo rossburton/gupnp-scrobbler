@@ -31,10 +31,10 @@ scrob (DIDL *didl)
                              "string:\"%s\" " /* title */
                              "uint32: " /* track number */
                              "uint32:0 " /* length */
-                             "string: " /* album */
+                             "string:\"%s\" " /* album */
                              "string: " /* musicbrainz ID */
                              "string:%s", /* type */
-                             time (NULL), didl->artist, didl->title, type);
+                             time (NULL), didl->artist, didl->title, didl->album, type);
   res = system (command);
   g_free (command);
 }
