@@ -8,6 +8,7 @@ typedef struct {
   char *class;
   char *title;
   char *artist;
+  char *album;
 } DIDL;
 
 static void
@@ -78,6 +79,7 @@ static const struct {
   { "upnp:class", G_STRUCT_OFFSET (DIDL, class) },
   { "dc:title", G_STRUCT_OFFSET (DIDL, title) },
   { "upnp:artist", G_STRUCT_OFFSET (DIDL, artist) },
+  { "upnp:album", G_STRUCT_OFFSET (DIDL, album) },
 };
 
 static void
