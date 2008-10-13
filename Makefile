@@ -1,6 +1,6 @@
 CFLAGS = `pkg-config --cflags --libs gupnp-1.0 libxml-2.0 libnotify` -g -Wall
 
-tracknotify:
+upnp-scrobbler:
 
 clean:
-	rm -f tracknotify
+	rm -f upnp-scrobbler
