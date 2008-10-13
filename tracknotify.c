@@ -13,9 +13,15 @@ typedef struct {
 static void
 scrob (DIDL *didl)
 {
+  const char *type;
   char *command;
   int res;
   
+  if (strcmp (didl->class, "object.item.audioItem.audioBroadcast") == 0)
+    type = "R";
+  else
+    type = "P";
+
   command = g_strdup_printf ("dbus-send --print-reply --dest=com.burtonini.Scrobbler "
                              "/com/burtonini/Scrobbler "
                              "com.burtonini.Scrobbler.Submit "
@@ -26,8 +32,8 @@ scrob (DIDL *didl)
                              "uint32:0 " /* length */
                              "string: " /* album */
                              "string: " /* musicbrainz ID */
-                             "string:P", /* type */
-                             time (NULL), didl->artist, didl->title);
+                             "string:%s", /* type */
+                             time (NULL), didl->artist, didl->title, type);
   res = system (command);
   g_free (command);
 }
