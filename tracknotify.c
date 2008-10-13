@@ -46,15 +46,22 @@ notify (DIDL *didl)
   NotifyNotification *notify;
   char *message;
 
-  if (didl->title && didl->artist)
+  if (didl->title && didl->artist && didl->album)
+    message = g_markup_printf_escaped ("Playing %s by %s from %s", didl->title, didl->artist, didl->album);
+  else if (didl->title && didl->artist)
     message = g_markup_printf_escaped ("Playing %s by %s", didl->title, didl->artist);
-  else if (didl->title && !didl->artist)
+  else if (didl->title)
     message = g_markup_printf_escaped ("Playing %s", didl->title);
-  else if (!didl->title && didl->artist)
+  else if (didl->artist)
     message = g_markup_printf_escaped ("Playing %s", didl->artist);
-  else
+  else if (didl->album)
+    message = g_markup_printf_escaped ("Playing %s", didl->album);
+  else {
+    g_warning ("TODO: unhandled combination %p %p %p",
+               didl->title, didl->artist, didl->album);
     return;
-  
+  }
+
   /* TODO: if the notify is already on screen, change it */
   
   notify = notify_notification_new (message, NULL,
