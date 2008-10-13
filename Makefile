@@ -1,4 +1,6 @@
-CFLAGS = `pkg-config --cflags --libs gupnp-1.0 libxml-2.0 libnotify` -g -Wall
+PKGS = gupnp-1.0 libxml-2.0 libnotify
+CPPFLAGS = `pkg-config --cflags $(PKGS)` -g -Wall
+LDFLAGS = `pkg-config --libs $(PKGS)`
 
 upnp-scrobbler:
 
