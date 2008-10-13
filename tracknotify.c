@@ -29,7 +29,7 @@ scrob (DIDL *didl)
                              "uint32:%ld " /* timestamp */
                              "string:\"%s\" " /* artist */
                              "string:\"%s\" " /* title */
-                             "uint32:0 " /* track number */
+                             "uint32: " /* track number */
                              "uint32:0 " /* length */
                              "string: " /* album */
                              "string: " /* musicbrainz ID */
